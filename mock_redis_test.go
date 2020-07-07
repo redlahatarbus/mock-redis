@@ -13,30 +13,29 @@ import (
 )
 
 func TestDoSomething(t *testing.T) {
-	// Setup
 	mr, _ := miniredis.Run()
 	defer mr.Close()
 	c := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 
-	// Test code
 	err := DoSomething(context.Background(), c, map[string]interface{}{"key1": "value1"}, time.Hour)
 
-	// Validate
+	// Validate error
 	if err != nil {
 		t.Errorf("No error was expected")
 	}
 
+	// Validate hash key value
 	if val := mr.HGet("myhash", "key1"); val != "value1" {
 		t.Errorf("Actual value %v does not match expected value", val)
 	}
 
+	// Validate expiry
 	if mr.FastForward(time.Hour + 1); mr.Exists("myhash") {
 		t.Errorf("Key should have expired")
 	}
 }
 
 func TestDoSomethingHSetFail(t *testing.T) {
-	// Setup
 	mr, _ := miniredis.Run()
 	defer mr.Close()
 	c := redis.NewClient(&redis.Options{Addr: mr.Addr()})
@@ -50,13 +49,10 @@ func TestDoSomethingHSetFail(t *testing.T) {
 		},
 	})
 
-	// Test code
 	err := DoSomething(context.Background(), c, map[string]interface{}{"key1": "value1"}, time.Hour)
 
-	// Validate
-	if err == nil {
-		t.Errorf("An error was expected")
-	} else if !strings.Contains(err.Error(), "expire error") {
+	// Validate error
+	if err == nil || !strings.Contains(err.Error(), "expire error") {
 		t.Errorf("Expected error `%v` does not match actual error `%v`", "expire error", err)
 	}
 }
